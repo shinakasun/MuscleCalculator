@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>每日營養監控 v3</title>
+  <title>計算肌 v3</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     ::-webkit-scrollbar { display: none; }
@@ -13,7 +13,7 @@
 <body class="bg-gray-100 text-gray-800 font-sans pb-20">
 
   <header class="bg-blue-600 text-white p-4 flex justify-between items-center sticky top-0 z-10 shadow-md">
-    <h1 class="text-xl font-bold">營養與體態監控</h1>
+    <h1 class="text-xl font-bold">計算肌 v3</h1>
     <button onclick="toggleModal('settingsModal')" class="bg-blue-700 hover:bg-blue-800 p-2 rounded text-sm">⚙️ 設定體態</button>
   </header>
 
@@ -61,16 +61,19 @@
         </div>
         
         <div class="flex items-center space-x-2">
-          <label class="w-24 text-sm text-gray-600 font-bold">輸入數量(g/ml)</label>
+          <!-- <label class="w-24 text-sm text-gray-600 font-bold">輸入數量(g/ml)</label> -->
+          <label class="w-24 text-sm text-gray-600 font-bold">輸入數量(g/ml/個...看得懂就好)</label>
           <input type="number" id="inp-qty" value="100" class="flex-1 border p-2 rounded font-black text-blue-600 text-lg" oninput="updateNutrientsByQty()">
         </div>
         
         <div class="flex space-x-1 justify-end">
           <button onclick="adjQty(1)" class="px-2 py-1 bg-gray-200 rounded text-xs font-bold">+1</button>
           <button onclick="adjQty(10)" class="px-2 py-1 bg-gray-200 rounded text-xs font-bold">+10</button>
+          <button onclick="adjQty(50)" class="px-2 py-1 bg-gray-200 rounded text-xs font-bold">+50</button>
           <button onclick="adjQty(100)" class="px-2 py-1 bg-gray-200 rounded text-xs font-bold">+100</button>
           <button onclick="adjQty(-1)" class="px-2 py-1 bg-gray-200 rounded text-xs font-bold">-1</button>
           <button onclick="adjQty(-10)" class="px-2 py-1 bg-gray-200 rounded text-xs font-bold">-10</button>
+          <button onclick="adjQty(-50)" class="px-2 py-1 bg-gray-200 rounded text-xs font-bold">-50</button>
           <button onclick="adjQty(-100)" class="px-2 py-1 bg-gray-200 rounded text-xs font-bold">-100</button>
         </div>
 
@@ -108,17 +111,17 @@
         <div class="flex justify-between items-center">
           <label>目前體重 (kg)</label>
           <div class="flex items-center space-x-2">
-            <button onclick="adjSetting('set-weight', -0.5)" class="bg-gray-200 px-3 py-1 rounded font-bold">-</button>
+            <button onclick="adjSetting('set-weight', -0.1)" class="bg-gray-200 px-3 py-1 rounded font-bold">-</button>
             <input type="number" id="set-weight" class="w-16 text-center border p-1" step="0.1">
-            <button onclick="adjSetting('set-weight', 0.5)" class="bg-gray-200 px-3 py-1 rounded font-bold">+</button>
+            <button onclick="adjSetting('set-weight', 0.1)" class="bg-gray-200 px-3 py-1 rounded font-bold">+</button>
           </div>
         </div>
         <div class="flex justify-between items-center">
           <label>目前體脂 (%)</label>
           <div class="flex items-center space-x-2">
-            <button onclick="adjSetting('set-fat', -0.5)" class="bg-gray-200 px-3 py-1 rounded font-bold">-</button>
+            <button onclick="adjSetting('set-fat', -0.1)" class="bg-gray-200 px-3 py-1 rounded font-bold">-</button>
             <input type="number" id="set-fat" class="w-16 text-center border p-1" step="0.1">
-            <button onclick="adjSetting('set-fat', 0.5)" class="bg-gray-200 px-3 py-1 rounded font-bold">+</button>
+            <button onclick="adjSetting('set-fat', 0.1)" class="bg-gray-200 px-3 py-1 rounded font-bold">+</button>
           </div>
         </div>
         <hr>
@@ -545,7 +548,7 @@
 
     function adjSetting(id, val) {
       const el = document.getElementById(id);
-      el.value = (parseFloat(el.value) || 0) + val;
+      el.value = ((parseFloat(el.value) || 0) + val).toFixed(1);
     }
 
     function loadSettingsToUI() {
@@ -559,12 +562,15 @@
     }
 
     function saveSettings() {
-      data.settings.weight = parseFloat(document.getElementById('set-weight').value);
-      data.settings.bodyFat = parseFloat(document.getElementById('set-fat').value);
-      data.settings.targetWeight = parseFloat(document.getElementById('set-t-weight').value);
-      data.settings.targetFat = parseFloat(document.getElementById('set-t-fat').value);
-      data.settings.calLimit = parseFloat(document.getElementById('set-cal-limit').value);
-      data.settings.proMult = parseFloat(document.getElementById('set-pro-mult').value);
+      const toNum = (id) => parseFloat(parseFloat(document.getElementById(id).value || 0).toFixed(1));
+
+      data.settings.weight       = toNum('set-weight');
+      data.settings.bodyFat      = toNum('set-fat');
+      data.settings.targetWeight = toNum('set-t-weight');
+      data.settings.targetFat    = toNum('set-t-fat');
+      data.settings.proMult      = toNum('set-pro-mult');
+
+      data.settings.calLimit     = Math.round(parseFloat(document.getElementById('set-cal-limit').value) || 0);
 
       data.weightLogs.push({ date: Date.now(), w: data.settings.weight, f: data.settings.bodyFat });
       saveData();

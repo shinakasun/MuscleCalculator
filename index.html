@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>計算肌 v3</title>
+  <title>計算肌 v4</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     ::-webkit-scrollbar { display: none; }
@@ -13,7 +13,7 @@
 <body class="bg-gray-100 text-gray-800 font-sans pb-20">
 
   <header class="bg-blue-600 text-white p-4 flex justify-between items-center sticky top-0 z-10 shadow-md">
-    <h1 class="text-xl font-bold">計算肌 v3</h1>
+    <h1 class="text-xl font-bold">計算肌 v4</h1>
     <button onclick="toggleModal('settingsModal')" class="bg-blue-700 hover:bg-blue-800 p-2 rounded text-sm">⚙️ 設定體態</button>
   </header>
 
@@ -61,7 +61,6 @@
         </div>
         
         <div class="flex items-center space-x-2">
-          <!-- <label class="w-24 text-sm text-gray-600 font-bold">輸入數量(g/ml)</label> -->
           <label class="w-24 text-sm text-gray-600 font-bold">輸入數量(g/ml/個...看得懂就好)</label>
           <input type="number" id="inp-qty" value="100" class="flex-1 border p-2 rounded font-black text-blue-600 text-lg" oninput="updateNutrientsByQty()">
         </div>
@@ -93,7 +92,11 @@
           </select>
         </div>
 
-        <button onclick="addDailyRecord()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow hover:bg-blue-700 active:scale-95 transition">加入今日食譜</button>
+        <button id="btn-lock-ratio" onclick="toggleLockRatio()" class="w-full bg-gray-200 text-gray-700 border border-gray-300 font-bold py-2 rounded-lg shadow-sm hover:bg-gray-300 transition mt-2 mb-1 text-sm">
+          🔓 鎖定當前營養比例
+        </button>
+
+        <button onclick="addDailyRecord()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow hover:bg-blue-700 active:scale-95 transition mt-2">加入今日食譜</button>
       </div>
     </section>
 
@@ -143,23 +146,15 @@
   <div id="editFoodModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
     <div class="bg-white p-5 rounded-xl w-11/12 max-w-md max-h-[85vh] flex flex-col">
       <h2 class="text-xl font-bold mb-2">修改常用食物營養基準</h2>
-      
-      <input type="text" id="editSearch" placeholder="🔍 搜尋要修改的食物..." 
-             oninput="renderEditList()" 
-             class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm mb-3">
-      
-      <div id="editFoodList" class="space-y-3 overflow-y-auto flex-1 pr-1">
-        </div>
-      
+      <input type="text" id="editSearch" placeholder="🔍 搜尋要修改的食物..." oninput="renderEditList()" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm mb-3">
+      <div id="editFoodList" class="space-y-3 overflow-y-auto flex-1 pr-1"></div>
       <div class="mt-4 pt-2 border-t">
         <button onclick="toggleModal('editFoodModal')" class="w-full bg-gray-500 text-white py-2 rounded font-bold">關閉視窗</button>
       </div>
     </div>
   </div>
-  
 
   <script>
-    // --- 核心資料架構 ---
     const DEFAULT_FOODS = [
       { id: "d1", name: "雞胸肉(150g/片)", qty: 150, cal: 165, pro: 34.5, carb: 0.0, fat: 2.0, count: 99 },
       { id: "d2", name: "雞里肌肉(30g/條)", qty: 30, cal: 32, pro: 6.8, carb: 0.0, fat: 0.4, count: 98 },
@@ -260,7 +255,7 @@
       { id: "d97", name: "蜂蜜(10g/茶匙)", qty: 10, cal: 32, pro: 0.0, carb: 8.0, fat: 0.0, count: 3 },
       { id: "d98", name: "黑巧克力(10g/份)", qty: 10, cal: 60, pro: 0.8, carb: 3.0, fat: 5.0, count: 2 },
       { id: "d99", name: "酪梨(50g/份)", qty: 50, cal: 80, pro: 1.0, carb: 4.3, fat: 7.3, count: 1 },
-      { id: "d100", name: "無糖黑豆漿(250ml/杯)", qty: 250, cal: 90, pro: 8.8, carb: 3.2, fat: 4.5, count: 0 }
+      { id: "d100", name: "無糖黑豆漿(250ml/杯)", qty: 250, cal: 90, pro: 8.8, carb: 3.2, fat: 4.5, count: 0 },
     ];
 
     let data = JSON.parse(localStorage.getItem('nutri_data'));
@@ -277,7 +272,8 @@
     }
 
     let currentFoodLink = null; 
-    const cookNames = { none: '清蒸/水煮', pan: '油煎/熱炒', fry: '油炸' };
+    let customNutritionRatio = null; // 【新增】用來儲存手動鎖定的營養比例
+    const cookNames = { none: '清蒸水煮/成品料理', pan: '油煎熱炒加成', fry: '油炸加成' };
 
     const todayStr = new Date().toLocaleDateString();
     if(localStorage.getItem('nutri_last_date') !== todayStr) {
@@ -307,7 +303,6 @@
       const targetPro = data.settings.weight * data.settings.proMult;
       const remPro = targetPro - tp;
 
-      // 儀表板視覺強化：熱量剩餘
       const calBox = document.getElementById('ui-rem-cal');
       if(remCal < 0) {
         calBox.innerHTML = `<span class="bg-red-500 text-white font-black px-2 py-1 rounded inline-block shadow-sm">🚨 超標 ${Math.abs(Math.round(remCal))} kcal</span>`;
@@ -315,7 +310,6 @@
         calBox.innerHTML = `<span class="bg-green-500 text-white font-black px-2 py-1 rounded inline-block shadow-sm">✨ 剩餘 ${Math.round(remCal)} kcal</span>`;
       }
 
-      // 儀表板視覺強化：蛋白質達標
       const proBox = document.getElementById('ui-rem-pro');
       if(remPro <= 0) {
         proBox.innerHTML = `<span class="bg-blue-600 text-white font-black px-2 py-1 rounded inline-block shadow-sm animate-bounce">🎯 已達標！</span>`;
@@ -329,7 +323,6 @@
       const searchInput = document.getElementById('foodSearch');
       const keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
-      // 篩選與排序邏輯
       let filteredFoods = data.foods.filter(f => f.name.toLowerCase().includes(keyword));
       const sorted = filteredFoods.sort((a, b) => b.count - a.count);
       
@@ -345,7 +338,7 @@
 
       container.innerHTML = sorted.map(f => 
         `<button onclick="selectFood('${f.id}')" class="bg-white text-gray-700 border border-gray-300 text-xs px-2 py-1.5 rounded shadow-sm hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition active:scale-95">
-          ${f.name} <span class="text-gray-400 font-normal">(${f.qty}g)</span>
+          ${f.name} <span class="text-gray-400 font-normal">(${f.qty})</span>
         </button>`
       ).join('');
     }
@@ -370,8 +363,45 @@
       `).reverse().join('');
     }
 
-    // --- 連動精算核心邏輯 ---
+    // 【新增】解除鎖定比例的安全函數
+    function unlockRatio() {
+      customNutritionRatio = null;
+      const btn = document.getElementById('btn-lock-ratio');
+      if (btn && btn.classList.contains('bg-green-100')) {
+        btn.innerHTML = '🔓 鎖定當前營養比例';
+        btn.classList.replace('bg-green-100', 'bg-gray-200');
+        btn.classList.replace('text-green-800', 'text-gray-700');
+        btn.classList.replace('border-green-300', 'border-gray-300');
+      }
+    }
+
+    // 【新增】觸發/解除鎖定比例
+    function toggleLockRatio() {
+      if (customNutritionRatio) {
+        unlockRatio();
+      } else {
+        const qty = parseFloat(document.getElementById('inp-qty').value) || 0;
+        if (qty <= 0) return alert('數量必須大於0才能鎖定比例！');
+
+        // 計算並鎖定每 1 單位的營養素
+        customNutritionRatio = {
+          cal: (parseFloat(document.getElementById('inp-cal').value) || 0) / qty,
+          pro: (parseFloat(document.getElementById('inp-pro').value) || 0) / qty,
+          carb: (parseFloat(document.getElementById('inp-carb').value) || 0) / qty,
+          fat: (parseFloat(document.getElementById('inp-fat').value) || 0) / qty
+        };
+
+        const btn = document.getElementById('btn-lock-ratio');
+        btn.innerHTML = '🔒 已鎖定比例 (變更數量將自動換算)';
+        btn.classList.replace('bg-gray-200', 'bg-green-100');
+        btn.classList.replace('text-gray-700', 'text-green-800');
+        btn.classList.replace('border-gray-300', 'border-green-300');
+      }
+    }
+
     function selectFood(id) {
+      unlockRatio(); // 點選快選食物時，解除手動鎖定避免衝突
+      
       currentFoodLink = data.foods.find(x => x.id === id);
       if(!currentFoodLink) return;
       
@@ -384,15 +414,30 @@
     }
 
     function updateNutrientsByQty() {
-      if (!currentFoodLink) return;
       const qty = parseFloat(document.getElementById('inp-qty').value) || 0;
       const cook = document.getElementById('inp-cook').value;
       
-      const ratio = qty / currentFoodLink.qty;
-      let cal = currentFoodLink.cal * ratio;
-      let pro = currentFoodLink.pro * ratio;
-      let carb = currentFoodLink.carb * ratio;
-      let fat = currentFoodLink.fat * ratio;
+      let cal = 0, pro = 0, carb = 0, fat = 0;
+      let hasRatio = false;
+
+      // 【修正】優先判定是否有自訂鎖定比例，沒有才判定常用食物連動
+      if (customNutritionRatio) {
+        cal = customNutritionRatio.cal * qty;
+        pro = customNutritionRatio.pro * qty;
+        carb = customNutritionRatio.carb * qty;
+        fat = customNutritionRatio.fat * qty;
+        hasRatio = true;
+      } else if (currentFoodLink) {
+        const ratio = qty / currentFoodLink.qty;
+        cal = currentFoodLink.cal * ratio;
+        pro = currentFoodLink.pro * ratio;
+        carb = currentFoodLink.carb * ratio;
+        fat = currentFoodLink.fat * ratio;
+        hasRatio = true;
+      }
+
+      // 如果都沒有鎖定比例，就不干涉使用者的手動輸入
+      if (!hasRatio) return; 
 
       if (cook === 'pan') { cal += qty * 0.4;  fat += qty * 0.04; }
       if (cook === 'fry') { cal += qty * 1.2;  fat += qty * 0.12; }
@@ -406,6 +451,7 @@
     function clearCurrentFoodLink() {
       currentFoodLink = null;
       document.getElementById('link-badge').classList.add('hidden');
+      unlockRatio(); // 使用者手動去修改營養素欄位時，必須解除鎖定防呆
     }
 
     function adjQty(val) {
@@ -414,7 +460,6 @@
       updateNutrientsByQty();
     }
 
-    // --- 寫入資料集 ---
     function addDailyRecord() {
       const name = document.getElementById('inp-name').value.trim();
       const qty = parseFloat(document.getElementById('inp-qty').value) || 0;
@@ -476,11 +521,9 @@
       renderApp();
     }
 
-    // --- 食物字典維護模式 (Modal 編輯) ---
     function renderEditList() {
       const list = document.getElementById('editFoodList');
       const keyword = document.getElementById('editSearch') ? document.getElementById('editSearch').value.trim().toLowerCase() : '';
-
 
       const filteredFoods = data.foods.map((f, index) => ({...f, originalIndex: index}))
                                         .filter(f => f.name.toLowerCase().includes(keyword));
@@ -575,26 +618,53 @@
       data.weightLogs.push({ date: Date.now(), w: data.settings.weight, f: data.settings.bodyFat });
       saveData();
       renderApp();
-      toggleModal('settingsModal');
+      calcPrediction();
+      alert("體態資料已儲存！");  
     }
 
     function calcPrediction() {
-      const box = document.getElementById('predict-box');
-      if(data.weightLogs.length < 2) {
-        box.innerHTML = "💡 數據觀測中，請跨日多次點擊「儲存紀錄」以產生平均體態下降斜率。";
-        return;
-      }
-      const first = data.weightLogs[0];
-      const last = data.weightLogs[data.weightLogs.length - 1];
-      const days = (last.date - first.date) / (1000 * 60 * 60 * 24);
-      
-      if(days < 0.5) { box.innerHTML = "💡 需要至少間隔一天以上的紀錄才能精算每日斜率。"; return; }
-      
-      const wDrop = (first.w - last.w) / days;
-      if(wDrop <= 0) { box.innerHTML = "📉 目前體重無下降斜率，請確認熱量缺口。"; return; }
+     const box = document.getElementById('predict-box');
+           
+       // 1. 基礎防呆：樣本數不足
+       if(data.weightLogs.length < 2) {
+         box.innerHTML = "💡 數據觀測中，請跨日多次點擊「儲存紀錄」以產生平均體態下降斜率。";
+         return;
+       }
 
-      const remW = data.settings.weight - data.settings.targetWeight;
-      box.innerHTML = remW <= 0 ? "🎉 已達成目標體重！" : `過去平均每日減重 <b>${wDrop.toFixed(3)}</b> kg<br>預計 <b>${Math.ceil(remW / wDrop)}</b> 天後到達目標。`;
+       const first = data.weightLogs[0];
+       const last = data.weightLogs[data.weightLogs.length - 1];
+       const days = (last.date - first.date) / (1000 * 60 * 60 * 24);
+       const roundedDays = Math.max(1, Math.round(days));
+
+       // 2. 計算斜率
+       const wDrop = (first.w - last.w) / days; // 每日體重變化
+       const fDrop = (first.f - last.f) / days; // 每日體脂變化
+
+       // 3. 樣本數警告（小於7天）
+       let warning = "";
+       if (days < 7) {
+         warning = `<div class="text-red-600 text-xs mt-1 font-bold">⚠️ 注意：當前資料統計僅 ${roundedDays} 天，樣本過少可能導致數據失準，建議累積至 7 天以上。</div>`;
+       }
+
+       // 4. 輸出顯示
+       const remW = data.settings.weight - data.settings.targetWeight;
+       
+       let html = `
+         <div class="space-y-1">
+           <div>統計天數: <b>${roundedDays}</b> 天</div>
+           <div>每日體重變化: <b class="${wDrop >= 0 ? 'text-green-600' : 'text-red-500'}">${wDrop > 0 ? '-' : '+'}${Math.abs(wDrop).toFixed(3)} kg</b></div>
+           <div>每日體脂變化: <b class="${fDrop >= 0 ? 'text-green-600' : 'text-red-500'}">${fDrop > 0 ? '-' : '+'}${Math.abs(fDrop).toFixed(3)} %</b></div>
+           ${warning}
+         </div>
+       `;
+
+       if (remW > 0 && wDrop > 0) {
+         html += `<div class="mt-2 text-blue-700">預計 <b>${Math.ceil(remW / wDrop)}</b> 天後達成目標體重。</div>`;
+       } else if (remW <= 0) {
+         html += `<div class="mt-2 text-green-700 font-bold">🎉 已達成目標體重！</div>`;
+       }
+
+       box.innerHTML = html;
     }
 
     // 初始化應用程式

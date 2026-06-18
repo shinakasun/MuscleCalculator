@@ -61,7 +61,7 @@
         </div>
         
         <div class="flex items-center space-x-2">
-          <label class="w-24 text-sm text-gray-600 font-bold">輸入數量(g/ml/個...看得懂就好)</label>
+          <label class="w-24 text-sm text-gray-600 font-bold">輸入數量(g/ml/個...看得懂為主)</label>
           <input type="number" id="inp-qty" value="100" class="flex-1 border p-2 rounded font-black text-blue-600 text-lg" oninput="updateNutrientsByQty()">
         </div>
         
@@ -623,48 +623,57 @@
     }
 
     function calcPrediction() {
-     const box = document.getElementById('predict-box');
-           
-       // 1. 基礎防呆：樣本數不足
-       if(data.weightLogs.length < 2) {
-         box.innerHTML = "💡 數據觀測中，請跨日多次點擊「儲存紀錄」以產生平均體態下降斜率。";
-         return;
-       }
+      const box = document.getElementById('predict-box');
+            
+            // 1. 基礎防呆：樣本數不足
+            if(data.weightLogs.length < 2) {
+              box.innerHTML = "💡 數據觀測中，請跨日多次點擊「儲存紀錄」以產生平均體態下降斜率。";
+              return;
+            }
 
-       const first = data.weightLogs[0];
-       const last = data.weightLogs[data.weightLogs.length - 1];
-       const days = (last.date - first.date) / (1000 * 60 * 60 * 24);
-       const roundedDays = Math.max(1, Math.round(days));
+            const first = data.weightLogs[0];
+            const last = data.weightLogs[data.weightLogs.length - 1];
+            const days = (last.date - first.date) / (1000 * 60 * 60 * 24);
+            const roundedDays = Math.max(1, Math.round(days));
 
-       // 2. 計算斜率
-       const wDrop = (first.w - last.w) / days; // 每日體重變化
-       const fDrop = (first.f - last.f) / days; // 每日體脂變化
+            // 2. 計算斜率
+            const wDrop = (first.w - last.w) / days; // 每日體重變化
+            const fDrop = (first.f - last.f) / days; // 每日體脂變化
 
-       // 3. 樣本數警告（小於7天）
-       let warning = "";
-       if (days < 7) {
-         warning = `<div class="text-red-600 text-xs mt-1 font-bold">⚠️ 注意：當前資料統計僅 ${roundedDays} 天，樣本過少可能導致數據失準，建議累積至 7 天以上。</div>`;
-       }
+            // 3. 樣本數警告（小於7天）
+            let warning = "";
+            if (days < 7) {
+              warning = `<div class="text-red-600 text-xs mt-1 font-bold">⚠️ 注意：當前資料統計僅 ${roundedDays} 天，樣本過少，建議累積至 7 天以上。</div>`;
+            }
 
-       // 4. 輸出顯示
-       const remW = data.settings.weight - data.settings.targetWeight;
-       
-       let html = `
-         <div class="space-y-1">
-           <div>統計天數: <b>${roundedDays}</b> 天</div>
-           <div>每日體重變化: <b class="${wDrop >= 0 ? 'text-green-600' : 'text-red-500'}">${wDrop > 0 ? '-' : '+'}${Math.abs(wDrop).toFixed(3)} kg</b></div>
-           <div>每日體脂變化: <b class="${fDrop >= 0 ? 'text-green-600' : 'text-red-500'}">${fDrop > 0 ? '-' : '+'}${Math.abs(fDrop).toFixed(3)} %</b></div>
-           ${warning}
-         </div>
-       `;
+            // 4. 輸出顯示與預測
+            const remW = data.settings.weight - data.settings.targetWeight;
+            const remF = data.settings.bodyFat - data.settings.targetFat;
+            
+            let html = `
+              <div class="space-y-1">
+                <div>統計天數: <b>${roundedDays}</b> 天</div>
+                <div>每日體重變化: <b class="${wDrop >= 0 ? 'text-green-600' : 'text-red-500'}">${wDrop > 0 ? '-' : '+'}${Math.abs(wDrop).toFixed(3)} kg</b></div>
+                <div>每日體脂變化: <b class="${fDrop >= 0 ? 'text-green-600' : 'text-red-500'}">${fDrop > 0 ? '-' : '+'}${Math.abs(fDrop).toFixed(3)} %</b></div>
+                ${warning}
+              </div>
+            `;
 
-       if (remW > 0 && wDrop > 0) {
-         html += `<div class="mt-2 text-blue-700">預計 <b>${Math.ceil(remW / wDrop)}</b> 天後達成目標體重。</div>`;
-       } else if (remW <= 0) {
-         html += `<div class="mt-2 text-green-700 font-bold">🎉 已達成目標體重！</div>`;
-       }
+            // 體重預測
+            if (remW > 0 && wDrop > 0) {
+              html += `<div class="mt-2 text-blue-700">預計 <b>${Math.ceil(remW / wDrop)}</b> 天後達成目標體重。</div>`;
+            } else if (remW <= 0) {
+              html += `<div class="mt-2 text-green-700 font-bold">🎉 已達成目標體重！</div>`;
+            }
 
-       box.innerHTML = html;
+            // 體脂預測 (新增邏輯)
+            if (remF > 0 && fDrop > 0) {
+              html += `<div class="mt-2 text-purple-700">預計 <b>${Math.ceil(remF / fDrop)}</b> 天後達成目標體脂。</div>`;
+            } else if (remF <= 0) {
+              html += `<div class="mt-2 text-green-700 font-bold">🎉 已達成目標體脂！</div>`;
+            }
+
+            box.innerHTML = html;
     }
 
     // 初始化應用程式

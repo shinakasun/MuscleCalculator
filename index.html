@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>計算肌 v4</title>
+  <title>計算肌 v4.1</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     ::-webkit-scrollbar { display: none; }
@@ -13,7 +13,7 @@
 <body class="bg-gray-100 text-gray-800 font-sans pb-20">
 
   <header class="bg-blue-600 text-white p-4 flex justify-between items-center sticky top-0 z-10 shadow-md">
-    <h1 class="text-xl font-bold">計算肌 v4</h1>
+    <h1 class="text-xl font-bold">計算肌 v4.1</h1>
     <button onclick="toggleModal('settingsModal')" class="bg-blue-700 hover:bg-blue-800 p-2 rounded text-sm">⚙️ 設定體態</button>
   </header>
 
@@ -649,26 +649,35 @@
             // 4. 輸出顯示與預測
             const remW = data.settings.weight - data.settings.targetWeight;
             const remF = data.settings.bodyFat - data.settings.targetFat;
+
+            // 輔助函式：根據剩餘天數算出具體日期
+            const getTargetDate = (days) => {
+                const date = new Date();
+                date.setDate(date.getDate() + Math.ceil(days));
+                return date.toLocaleDateString('zh-TW', { month: 'long', day: 'numeric' });
+            };
             
             let html = `
               <div class="space-y-1">
                 <div>統計天數: <b>${roundedDays}</b> 天</div>
-                <div>每日體重變化: <b class="${wDrop >= 0 ? 'text-green-600' : 'text-red-500'}">${wDrop > 0 ? '-' : '+'}${Math.abs(wDrop).toFixed(3)} kg</b></div>
-                <div>每日體脂變化: <b class="${fDrop >= 0 ? 'text-green-600' : 'text-red-500'}">${fDrop > 0 ? '-' : '+'}${Math.abs(fDrop).toFixed(3)} %</b></div>
+                <div>每日體重變化: <b class="${wDrop > 0 ? 'text-green-600' : 'text-red-500'}">${wDrop > 0 ? '-' : '+'}${Math.abs(wDrop).toFixed(3)} kg</b></div>
+                <div>每日體脂變化: <b class="${fDrop > 0 ? 'text-green-600' : 'text-red-500'}">${fDrop > 0 ? '-' : '+'}${Math.abs(fDrop).toFixed(3)} %</b></div>
                 ${warning}
               </div>
             `;
 
-            // 體重預測
+            // 體重預測 (包含日期)
             if (remW > 0 && wDrop > 0) {
-              html += `<div class="mt-2 text-blue-700">預計 <b>${Math.ceil(remW / wDrop)}</b> 天後達成目標體重。</div>`;
+              const daysLeft = remW / wDrop;
+              html += `<div class="mt-2 text-blue-700">預計約 <b>${Math.ceil(daysLeft)}</b> 天後（${getTargetDate(daysLeft)}）達成目標體重。</div>`;
             } else if (remW <= 0) {
               html += `<div class="mt-2 text-green-700 font-bold">🎉 已達成目標體重！</div>`;
             }
 
-            // 體脂預測 (新增邏輯)
+            // 體脂預測 (包含日期)
             if (remF > 0 && fDrop > 0) {
-              html += `<div class="mt-2 text-purple-700">預計 <b>${Math.ceil(remF / fDrop)}</b> 天後達成目標體脂。</div>`;
+              const daysLeft = remF / fDrop;
+              html += `<div class="mt-2 text-purple-700">預計約 <b>${Math.ceil(daysLeft)}</b> 天後（${getTargetDate(daysLeft)}）達成目標體脂。</div>`;
             } else if (remF <= 0) {
               html += `<div class="mt-2 text-green-700 font-bold">🎉 已達成目標體脂！</div>`;
             }

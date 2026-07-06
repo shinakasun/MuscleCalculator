@@ -671,7 +671,7 @@
               html += `
                 <div class="mt-3 text-blue-700">
                   <div>預計約 <b>${Math.ceil(daysLeft)}</b> 天後達成目標體重。</div>
-                  <div class="font-bold">預計於 ${getTargetDate(daysLeft)} 達成目標。</div>
+                  <div>預計於 <b>${getTargetDate(daysLeft)}</b> 達成目標。</div>
                 </div>`;
             } else if (remW <= 0) {
               html += `<div class="mt-3 text-green-700 font-bold">🎉 已達成目標體重！</div>`;
@@ -683,7 +683,7 @@
               html += `
                 <div class="mt-3 text-purple-700">
                   <div>預計約 <b>${Math.ceil(daysLeft)}</b> 天後達成目標體脂。</div>
-                  <div class="font-bold">預計於 ${getTargetDate(daysLeft)} 達成目標。</div>
+                  <div>預計於 <b>${getTargetDate(daysLeft)}</b> 達成目標。</div>
                 </div>`;
             } else if (remF <= 0) {
               html += `<div class="mt-3 text-green-700 font-bold">🎉 已達成目標體脂！</div>`;
